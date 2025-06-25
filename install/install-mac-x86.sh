@@ -28,6 +28,54 @@ log_debug() {
     echo -e "${BLUE}[DEBUG]${NC} $1"
 }
 
+# Set up Neovim configuration
+setup_nvim_config() {
+    log_info "Setting up Neovim configuration..."
+    
+    # Create config directory if it doesn't exist
+    mkdir -p ~/.config/nvim
+    
+    # Get the directory where this script is located
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    
+    # Check if init.lua exists in the parent directory
+    if [[ -f "$SCRIPT_DIR/../init.lua" ]]; then
+        log_info "Copying init.lua to ~/.config/nvim/"
+        cp "$SCRIPT_DIR/../init.lua" ~/.config/nvim/
+        
+        # Fix the Neotree keymap syntax if needed
+        sed -i '' "s/vim.keymap.set('n', '<C-n>', ':Neotree filesystem reveal left')/vim.keymap.set('n', '<C-n>', ':Neotree filesystem reveal left<CR>', {})/" ~/.config/nvim/init.lua 2>/dev/null || true
+        
+        log_info "Neovim configuration installed successfully!"
+        log_info "Your plugins (Neo-tree, Telescope, Catppuccin theme, etc.) will be automatically installed on first run"
+    else
+        log_warn "init.lua not found in $SCRIPT_DIR/../init.lua"
+        log_warn "Please manually copy your configuration to ~/.config/nvim/init.lua"
+    fi
+}
+
+# Install dependencies
+install_dependencies() {
+    log_info "Installing Neovim dependencies..."
+    
+    # Check if Homebrew is available for dependencies
+    if command -v brew &> /dev/null; then
+        log_info "Using Homebrew to install dependencies..."
+        brew install ripgrep fd bat fzf 2>/dev/null || {
+            log_warn "Some Homebrew packages failed to install, but Neovim will still work"
+        }
+        log_info "Dependencies installed successfully!"
+        log_info "  - ripgrep: Fast text search for Telescope live_grep"
+        log_info "  - fd: Fast file finder for Telescope find_files"
+        log_info "  - bat: Syntax-highlighted file previews"
+        log_info "  - fzf: Fuzzy finder"
+    else
+        log_warn "Homebrew not found - some Telescope features may be limited"
+        log_info "Consider installing: ripgrep, fd, bat, fzf manually"
+        log_info "You can install Homebrew from: https://brew.sh"
+    fi
+}
+
 # Check if running on macOS
 if [[ "$OSTYPE" != "darwin"* ]]; then
     log_error "This script is designed for macOS only"
@@ -37,11 +85,14 @@ fi
 # Check if running on x86_64
 if [[ $(uname -m) != "x86_64" ]]; then
     log_error "This script is for Intel (x86_64) Macs only"
-    log_info "Use install-mac-arm.sh for Apple Silicon Macs"
+    log_info "Use install-mac-x86.sh for Intel Macs"
     exit 1
 fi
 
 log_info "Starting Neovim installation for Mac x86_64..."
+
+# Install dependencies first
+install_dependencies
 
 # Check if Neovim is already installed
 if command -v nvim &> /dev/null; then
@@ -148,6 +199,9 @@ else
     exit 1
 fi
 
+# Set up Neovim configuration
+setup_nvim_config
+
 log_info "Neovim installation completed successfully!"
 log_warn "Please restart your terminal or run 'source $SHELL_PROFILE' to update your PATH"
 log_info "You can now run 'nvim' to start Neovim"
@@ -160,3 +214,11 @@ echo "  nvim            - Start Neovim"
 echo "  :q              - Quit (in Neovim)"
 echo "  :q!             - Quit without saving"
 echo "  :wq             - Save and quit"
+echo
+echo "Your custom keybindings:"
+echo "  Ctrl+N          - Toggle Neo-tree file explorer"
+echo "  Ctrl+F          - Find files (Telescope)"
+echo "  Space+fg        - Live grep search (requires ripgrep)"
+echo "  Space+fb        - Find buffers"
+echo "  Space+fh        - Find help tags"
+echo "  (leader key is Space)"
