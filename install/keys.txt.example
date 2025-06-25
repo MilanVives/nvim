@@ -1,0 +1,21 @@
+# SSH Keys File
+# Add one SSH public key per line
+# Comments right above a key will be copied to authorized_keys along with the key
+# Empty lines reset the comment context
+
+# John's work laptop
+ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC... john@work-laptop
+
+# Jane's personal desktop
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI... jane@desktop
+
+# Server deployment key
+ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTY... deploy@server
+
+# This is a general comment that won't be associated with any key
+
+# Alice's MacBook Pro
+ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQD... alice@macbook
+
+# Bob's development environment  
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAB... bob@dev-env
