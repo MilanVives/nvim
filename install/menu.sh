@@ -10,15 +10,35 @@ show_menu() {
     echo "========================================="
     echo "        Installation Menu"
     echo "========================================="
-    echo "1) Install Neovim (Ubuntu)"
-    echo "2) Install Docker (Ubuntu)"
-    echo "3) Install Neovim (Mac ARM)"
-    echo "4) Install Neovim (Mac x86)"
-    echo "5) Install Neovim (Mac Brew)"
-    echo "6) Deploy SSH Keys from keys.txt"
-    echo "7) Exit"
+    
+    # Detect current system
+    local arch=$(uname -m)
+    local os=$(uname -s)
+    echo "Current system: $os $arch"
+    echo
+    
+    # Show options with recommendations
+    if [[ "$os" == "Linux" ]]; then
+        if [[ "$arch" == "aarch64" || "$arch" == "arm64" ]]; then
+            echo "1) Install Neovim (Ubuntu x86_64)"
+            echo "2) Install Neovim (Ubuntu ARM64) ← RECOMMENDED FOR YOUR SYSTEM"
+        else
+            echo "1) Install Neovim (Ubuntu x86_64) ← RECOMMENDED FOR YOUR SYSTEM"
+            echo "2) Install Neovim (Ubuntu ARM64)"
+        fi
+    else
+        echo "1) Install Neovim (Ubuntu x86_64)"
+        echo "2) Install Neovim (Ubuntu ARM64)"
+    fi
+    
+    echo "3) Install Docker (Ubuntu)"
+    echo "4) Install Neovim (Mac ARM)"
+    echo "5) Install Neovim (Mac x86)"
+    echo "6) Install Neovim (Mac Brew)"
+    echo "7) Deploy SSH Keys from keys.txt"
+    echo "8) Exit"
     echo "========================================="
-    echo -n "Please select an option [1-7]: "
+    echo -n "Please select an option [1-8]: "
 }
 
 deploy_ssh_keys() {
@@ -134,25 +154,29 @@ main() {
                 ;;
             2)
                 echo
-                run_script "docker-ubuntu.sh"
+                run_script "install-ubuntu-arm64.sh"
                 ;;
             3)
                 echo
-                run_script "install-mac-arm.sh"
+                run_script "docker-ubuntu.sh"
                 ;;
             4)
                 echo
-                run_script "install-mac-x86.sh"
+                run_script "install-mac-arm.sh"
                 ;;
             5)
                 echo
-                run_script "install-mac-brew.sh"
+                run_script "install-mac-x86.sh"
                 ;;
             6)
                 echo
-                deploy_ssh_keys
+                run_script "install-mac-brew.sh"
                 ;;
             7)
+                echo
+                deploy_ssh_keys
+                ;;
+            8)
                 echo "Goodbye!"
                 exit 0
                 ;;

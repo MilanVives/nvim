@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Neovim Installation Script for Ubuntu
-# Downloads and installs the latest stable release
+# Neovim Installation Script for Ubuntu ARM64 (aarch64)
+# Downloads and installs the latest stable release for ARM64 architecture
 
 set -e  # Exit on any error
 
@@ -44,7 +44,7 @@ setup_nvim_config() {
         cp "$SCRIPT_DIR/../init.lua" ~/.config/nvim/
         
         # Fix the Neotree keymap syntax if needed
-        sed -i "s/vim.keymap.set('n', '<C-n>', ':Neotree filesystem reveal left')/vim.keymap.set('n', '<C-n>', ':Neotree filesystem reveal left<CR>', {})/" ~/.config/nvim/init.lua 2>/dev/null || true
+        sed -i "s/vim.keymap.set('n', '<C-n>', ':Neotree filesystem reveal left')/vim.keymap.set('n', '<C-n>', ':Neotree filesystem reveal left<CR>', {})/g" ~/.config/nvim/init.lua 2>/dev/null || true
         
         log_info "Neovim configuration installed successfully!"
         log_info "Your plugins (Neo-tree, Telescope, Catppuccin theme, etc.) will be automatically installed on first run"
@@ -85,7 +85,17 @@ if ! grep -q "Ubuntu" /etc/os-release; then
     exit 1
 fi
 
-log_info "Starting Neovim installation for Ubuntu..."
+# Check if architecture is ARM64
+ARCH=$(uname -m)
+if [[ "$ARCH" != "aarch64" && "$ARCH" != "arm64" ]]; then
+    log_error "This script is designed for ARM64 (aarch64) architecture only"
+    log_error "Your architecture is: $ARCH"
+    log_error "Please use the appropriate installation script for your architecture"
+    exit 1
+fi
+
+log_info "Starting Neovim installation for Ubuntu ARM64..."
+log_info "Detected architecture: $ARCH"
 
 # Install dependencies first
 install_dependencies
@@ -107,17 +117,25 @@ TEMP_DIR=$(mktemp -d)
 cd "$TEMP_DIR"
 log_debug "Using temporary directory: $TEMP_DIR"
 
-# Download latest Neovim release
-log_info "Downloading latest Neovim release..."
-if ! curl -LO https://github.com/neovim/neovim/releases/latest/download/nvim-linux-x86_64.tar.gz; then
+# Download latest Neovim release for ARM64
+log_info "Downloading latest Neovim release for ARM64..."
+if ! curl -LO https://github.com/neovim/neovim/releases/latest/download/nvim-linux-arm64.tar.gz; then
     log_error "Failed to download Neovim"
     rm -rf "$TEMP_DIR"
     exit 1
 fi
 
 # Verify download
-if [[ ! -f "nvim-linux-x86_64.tar.gz" ]]; then
+if [[ ! -f "nvim-linux-arm64.tar.gz" ]]; then
     log_error "Download file not found"
+    rm -rf "$TEMP_DIR"
+    exit 1
+fi
+
+# Check if downloaded file is actually a gzip file
+if ! file nvim-linux-arm64.tar.gz | grep -q "gzip compressed"; then
+    log_error "Downloaded file is not a valid gzip archive"
+    log_error "File content: $(cat nvim-linux-arm64.tar.gz)"
     rm -rf "$TEMP_DIR"
     exit 1
 fi
@@ -126,14 +144,14 @@ log_info "Download completed successfully"
 
 # Remove existing installation
 log_info "Removing existing Neovim installation (if any)..."
-sudo rm -rf /opt/nvim /opt/nvim-linux64 /opt/nvim-linux-x86_64
+sudo rm -rf /opt/nvim /opt/nvim-linux64 /opt/nvim-linux-x86_64 /opt/nvim-linux-arm64
 
 # Extract and install
-log_info "Installing Neovim to /opt/nvim-linux-x86_64..."
-sudo tar -C /opt -xzf nvim-linux-x86_64.tar.gz
+log_info "Installing Neovim to /opt/nvim-linux-arm64..."
+sudo tar -C /opt -xzf nvim-linux-arm64.tar.gz
 
 # Verify installation
-if [[ ! -f "/opt/nvim-linux-x86_64/bin/nvim" ]]; then
+if [[ ! -f "/opt/nvim-linux-arm64/bin/nvim" ]]; then
     log_error "Installation failed - nvim binary not found"
     rm -rf "$TEMP_DIR"
     exit 1
@@ -141,19 +159,23 @@ fi
 
 # Create symlink for easier access
 log_info "Creating symlink..."
-sudo ln -sf /opt/nvim-linux-x86_64/bin/nvim /usr/local/bin/nvim
+sudo ln -sf /opt/nvim-linux-arm64/bin/nvim /usr/local/bin/nvim
 
 # Update PATH in .bashrc if not already present
 log_info "Updating PATH in ~/.bashrc..."
-if ! grep -q "/opt/nvim-linux-x86_64/bin" ~/.bashrc; then
-    echo 'export PATH="$PATH:/opt/nvim-linux-x86_64/bin"' >> ~/.bashrc
+# Remove old nvim paths first
+sed -i '/nvim-linux/d' ~/.bashrc 2>/dev/null || true
+
+# Add the new path
+if ! grep -q "/opt/nvim-linux-arm64/bin" ~/.bashrc; then
+    echo 'export PATH="$PATH:/opt/nvim-linux-arm64/bin"' >> ~/.bashrc
     log_info "Added Neovim to PATH in ~/.bashrc"
 else
     log_info "Neovim path already exists in ~/.bashrc"
 fi
 
 # Also update PATH for current session
-export PATH="$PATH:/opt/nvim-linux-x86_64/bin"
+export PATH="$PATH:/opt/nvim-linux-arm64/bin"
 
 # Clean up
 cd "$HOME"
@@ -162,10 +184,11 @@ log_debug "Cleaned up temporary directory"
 
 # Test installation
 log_info "Testing Neovim installation..."
-if /opt/nvim-linux-x86_64/bin/nvim --version &> /dev/null; then
-    installed_version=$(/opt/nvim-linux-x86_64/bin/nvim --version | head -n1)
+if /opt/nvim-linux-arm64/bin/nvim --version &> /dev/null; then
+    installed_version=$(/opt/nvim-linux-arm64/bin/nvim --version | head -n1)
     log_info "Installation successful!"
     log_info "Installed version: $installed_version"
+    log_info "Architecture compatibility verified!"
 else
     log_error "Installation test failed"
     exit 1
@@ -174,7 +197,7 @@ fi
 # Set up Neovim configuration
 setup_nvim_config
 
-log_info "Neovim installation completed successfully!"
+log_info "Neovim ARM64 installation completed successfully!"
 log_warn "Please restart your terminal or run 'source ~/.bashrc' to update your PATH"
 log_info "You can now run 'nvim' to start Neovim"
 
@@ -200,3 +223,7 @@ echo "  ✓ ripgrep       - Fast text search"
 echo "  ✓ fd-find (fdfind) - Fast file finder"
 echo "  ✓ bat (batcat)     - Syntax highlighting"
 echo "  ✓ fzf           - Fuzzy finder"
+echo
+echo "System Information:"
+echo "  Architecture: $(uname -m)"
+echo "  Neovim Binary: /opt/nvim-linux-arm64/bin/nvim"
