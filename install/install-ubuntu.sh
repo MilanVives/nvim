@@ -172,14 +172,14 @@ log_debug "Using temporary directory: $TEMP_DIR"
 
 # Download latest Neovim release
 log_info "Downloading latest Neovim release..."
-if ! curl -LO https://github.com/neovim/neovim/releases/latest/download/nvim-linux64.tar.gz; then
+if ! curl -LO https://github.com/neovim/neovim/releases/latest/download/nvim-linux-x86_64.tar.gz; then
     log_error "Failed to download Neovim"
     rm -rf "$TEMP_DIR"
     exit 1
 fi
 
 # Verify download
-if [[ ! -f "nvim-linux64.tar.gz" ]]; then
+if [[ ! -f "nvim-linux-x86_64.tar.gz" ]]; then
     log_error "Download file not found"
     rm -rf "$TEMP_DIR"
     exit 1
@@ -189,14 +189,14 @@ log_info "Download completed successfully"
 
 # Remove existing installation
 log_info "Removing existing Neovim installation (if any)..."
-sudo rm -rf /opt/nvim /opt/nvim-linux64
+sudo rm -rf /opt/nvim /opt/nvim-linux64 /opt/nvim-linux-x86_64
 
 # Extract and install
-log_info "Installing Neovim to /opt/nvim-linux64..."
-sudo tar -C /opt -xzf nvim-linux64.tar.gz
+log_info "Installing Neovim to /opt/nvim-linux-x86_64..."
+sudo tar -C /opt -xzf nvim-linux-x86_64.tar.gz
 
 # Verify installation
-if [[ ! -f "/opt/nvim-linux64/bin/nvim" ]]; then
+if [[ ! -f "/opt/nvim-linux-x86_64/bin/nvim" ]]; then
     log_error "Installation failed - nvim binary not found"
     rm -rf "$TEMP_DIR"
     exit 1
@@ -204,7 +204,7 @@ fi
 
 # Create symlink for easier access
 log_info "Creating symlink..."
-sudo ln -sf /opt/nvim-linux64/bin/nvim /usr/local/bin/nvim
+sudo ln -sf /opt/nvim-linux-x86_64/bin/nvim /usr/local/bin/nvim
 
 # Update PATH in shell profile if not already present
 # Get the actual home directory (works for root and non-root users)
@@ -219,15 +219,19 @@ elif [[ -f "$home_dir/.bash_profile" ]]; then
 fi
 
 log_info "Updating PATH in $shell_profile..."
-if ! grep -q "/opt/nvim-linux64/bin" "$shell_profile" 2>/dev/null; then
-    echo 'export PATH="$PATH:/opt/nvim-linux64/bin"' >> "$shell_profile"
+# Remove old nvim paths first (cleanup from previous versions)
+sed -i '/nvim-linux/d' "$shell_profile" 2>/dev/null || true
+
+# Add the new x86_64 path
+if ! grep -q "/opt/nvim-linux-x86_64/bin" "$shell_profile" 2>/dev/null; then
+    echo 'export PATH="$PATH:/opt/nvim-linux-x86_64/bin"' >> "$shell_profile"
     log_info "Added Neovim to PATH in $shell_profile"
 else
     log_info "Neovim path already exists in $shell_profile"
 fi
 
 # Also update PATH for current session
-export PATH="$PATH:/opt/nvim-linux64/bin"
+export PATH="$PATH:/opt/nvim-linux-x86_64/bin"
 
 # Clean up
 cd "$HOME"
@@ -236,8 +240,8 @@ log_debug "Cleaned up temporary directory"
 
 # Test installation
 log_info "Testing Neovim installation..."
-if /opt/nvim-linux64/bin/nvim --version &> /dev/null; then
-    installed_version=$(/opt/nvim-linux64/bin/nvim --version | head -n1)
+if /opt/nvim-linux-x86_64/bin/nvim --version &> /dev/null; then
+    installed_version=$(/opt/nvim-linux-x86_64/bin/nvim --version | head -n1)
     log_info "Installation successful!"
     log_info "Installed version: $installed_version"
 else
