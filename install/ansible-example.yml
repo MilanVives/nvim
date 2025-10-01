@@ -1,0 +1,78 @@
+---
+# Ansible Playbook for Neovim Installation
+# This playbook demonstrates how to use the install-ubuntu.sh script in an automated way
+
+- name: Install Neovim on Ubuntu servers
+  hosts: ubuntu_servers
+  become: yes
+  vars:
+    nvim_repo_url: "https://github.com/yourusername/nvim.git"
+    nvim_repo_dest: "/tmp/nvim-installer"
+    
+  tasks:
+    - name: Ensure git is installed
+      apt:
+        name: git
+        state: present
+        update_cache: yes
+      
+    - name: Clone Neovim configuration repository
+      git:
+        repo: "{{ nvim_repo_url }}"
+        dest: "{{ nvim_repo_dest }}"
+        force: yes
+        
+    - name: Make install script executable
+      file:
+        path: "{{ nvim_repo_dest }}/install/install-ubuntu.sh"
+        mode: '0755'
+        
+    - name: Run Neovim installation script (non-interactive)
+      script: "{{ nvim_repo_dest }}/install/install-ubuntu.sh --non-interactive --force-reinstall"
+      environment:
+        NVIM_NON_INTERACTIVE: "true"
+        NVIM_FORCE_REINSTALL: "true"
+      register: nvim_install_result
+      
+    - name: Display installation result
+      debug:
+        var: nvim_install_result.stdout_lines
+        
+    - name: Verify Neovim installation
+      command: /opt/nvim-linux64/bin/nvim --version
+      register: nvim_version
+      
+    - name: Display Neovim version
+      debug:
+        msg: "Neovim installed successfully: {{ nvim_version.stdout_lines[0] }}"
+        
+    - name: Clean up temporary repository
+      file:
+        path: "{{ nvim_repo_dest }}"
+        state: absent
+
+# Alternative simplified version using direct script execution
+- name: Install Neovim (Alternative method)
+  hosts: ubuntu_servers
+  become: yes
+  tasks:
+    - name: Download and run install script directly
+      shell: |
+        curl -fsSL https://raw.githubusercontent.com/yourusername/nvim/main/install/install-ubuntu.sh | bash -s -- --non-interactive --force-reinstall
+      environment:
+        NVIM_NON_INTERACTIVE: "true"
+        NVIM_FORCE_REINSTALL: "true"
+      args:
+        creates: /opt/nvim-linux64/bin/nvim
+
+# For Docker container deployments
+- name: Install Neovim in Docker containers
+  hosts: docker_containers
+  connection: docker
+  tasks:
+    - name: Install Neovim in container
+      script: install-ubuntu.sh --non-interactive --force-reinstall
+      environment:
+        NVIM_NON_INTERACTIVE: "true"
+        NVIM_FORCE_REINSTALL: "true"
+      become: yes  # This will run as root in the container

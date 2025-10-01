@@ -2,8 +2,59 @@
 
 # Neovim Installation Script for Ubuntu
 # Downloads and installs the latest stable release
+# Supports automated/non-interactive execution for Ansible and CI/CD
+#
+# AUTOMATION FEATURES:
+# - Non-interactive mode: Use --non-interactive or NVIM_NON_INTERACTIVE=true
+# - Force reinstall: Use --force-reinstall or NVIM_FORCE_REINSTALL=true
+# - Root user support: Works correctly when run as root in containers
+# - Proper home directory detection: Handles both root and non-root users
+# - Shell profile detection: Automatically detects .bashrc, .zshrc, or .bash_profile
+#
+# ANSIBLE EXAMPLE:
+#   - name: Install Neovim
+#     script: install-ubuntu.sh --non-interactive --force-reinstall
+#     become: yes
+#     environment:
+#       NVIM_NON_INTERACTIVE: "true"
+#       NVIM_FORCE_REINSTALL: "true"
 
 set -e  # Exit on any error
+
+# Default values
+NON_INTERACTIVE=${NVIM_NON_INTERACTIVE:-false}
+FORCE_REINSTALL=${NVIM_FORCE_REINSTALL:-false}
+
+# Parse command line arguments
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --non-interactive)
+            NON_INTERACTIVE=true
+            shift
+            ;;
+        --force-reinstall)
+            FORCE_REINSTALL=true
+            shift
+            ;;
+        --help)
+            echo "Usage: $0 [options]"
+            echo "Options:"
+            echo "  --non-interactive    Skip all interactive prompts (for automation)"
+            echo "  --force-reinstall    Force reinstallation even if Neovim exists"
+            echo "  --help              Show this help message"
+            echo ""
+            echo "Environment variables:"
+            echo "  NVIM_NON_INTERACTIVE=true    Same as --non-interactive"
+            echo "  NVIM_FORCE_REINSTALL=true    Same as --force-reinstall"
+            exit 0
+            ;;
+        *)
+            echo "Unknown option: $1"
+            echo "Use --help for usage information"
+            exit 1
+            ;;
+    esac
+done
 
 # Colors for output
 RED='\033[0;31m'
@@ -32,25 +83,28 @@ log_debug() {
 setup_nvim_config() {
     log_info "Setting up Neovim configuration..."
     
+    # Get the actual home directory (works for root and non-root users)
+    local home_dir="${HOME:-$(getent passwd "$(whoami)" | cut -d: -f6)}"
+    
     # Create config directory if it doesn't exist
-    mkdir -p ~/.config/nvim
+    mkdir -p "$home_dir/.config/nvim"
     
     # Get the directory where this script is located
     SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
     
     # Check if init.lua exists in the parent directory
     if [[ -f "$SCRIPT_DIR/../init.lua" ]]; then
-        log_info "Copying init.lua to ~/.config/nvim/"
-        cp "$SCRIPT_DIR/../init.lua" ~/.config/nvim/
+        log_info "Copying init.lua to $home_dir/.config/nvim/"
+        cp "$SCRIPT_DIR/../init.lua" "$home_dir/.config/nvim/"
         
         # Fix the Neotree keymap syntax if needed
-        sed -i "s/vim.keymap.set('n', '<C-n>', ':Neotree filesystem reveal left')/vim.keymap.set('n', '<C-n>', ':Neotree filesystem reveal left<CR>', {})/" ~/.config/nvim/init.lua 2>/dev/null || true
+        sed -i "s/vim.keymap.set('n', '<C-n>', ':Neotree filesystem reveal left')/vim.keymap.set('n', '<C-n>', ':Neotree filesystem reveal left<CR>', {})/" "$home_dir/.config/nvim/init.lua" 2>/dev/null || true
         
         log_info "Neovim configuration installed successfully!"
         log_info "Your plugins (Neo-tree, Telescope, Catppuccin theme, etc.) will be automatically installed on first run"
     else
         log_warn "init.lua not found in $SCRIPT_DIR/../init.lua"
-        log_warn "Please manually copy your configuration to ~/.config/nvim/init.lua"
+        log_warn "Please manually copy your configuration to $home_dir/.config/nvim/init.lua"
     fi
 }
 
@@ -94,11 +148,20 @@ install_dependencies
 if command -v nvim &> /dev/null; then
     current_version=$(nvim --version | head -n1)
     log_warn "Neovim is already installed: $current_version"
-    read -p "Do you want to reinstall with the latest version? (y/N): " -n 1 -r
-    echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        log_info "Installation cancelled by user"
+    
+    if [[ "$FORCE_REINSTALL" == "true" ]]; then
+        log_info "Force reinstall flag set - proceeding with reinstallation"
+    elif [[ "$NON_INTERACTIVE" == "true" ]]; then
+        log_info "Non-interactive mode - skipping reinstallation (use --force-reinstall to override)"
+        log_info "Installation completed (existing version retained)"
         exit 0
+    else
+        read -p "Do you want to reinstall with the latest version? (y/N): " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            log_info "Installation cancelled by user"
+            exit 0
+        fi
     fi
 fi
 
@@ -143,13 +206,24 @@ fi
 log_info "Creating symlink..."
 sudo ln -sf /opt/nvim-linux64/bin/nvim /usr/local/bin/nvim
 
-# Update PATH in .bashrc if not already present
-log_info "Updating PATH in ~/.bashrc..."
-if ! grep -q "/opt/nvim-linux64/bin" ~/.bashrc; then
-    echo 'export PATH="$PATH:/opt/nvim-linux64/bin"' >> ~/.bashrc
-    log_info "Added Neovim to PATH in ~/.bashrc"
+# Update PATH in shell profile if not already present
+# Get the actual home directory (works for root and non-root users)
+home_dir="${HOME:-$(getent passwd "$(whoami)" | cut -d: -f6)}"
+shell_profile="$home_dir/.bashrc"
+
+# Try to detect the appropriate shell profile
+if [[ -f "$home_dir/.zshrc" ]] && [[ "$SHELL" == *"zsh"* ]]; then
+    shell_profile="$home_dir/.zshrc"
+elif [[ -f "$home_dir/.bash_profile" ]]; then
+    shell_profile="$home_dir/.bash_profile"
+fi
+
+log_info "Updating PATH in $shell_profile..."
+if ! grep -q "/opt/nvim-linux64/bin" "$shell_profile" 2>/dev/null; then
+    echo 'export PATH="$PATH:/opt/nvim-linux64/bin"' >> "$shell_profile"
+    log_info "Added Neovim to PATH in $shell_profile"
 else
-    log_info "Neovim path already exists in ~/.bashrc"
+    log_info "Neovim path already exists in $shell_profile"
 fi
 
 # Also update PATH for current session
@@ -175,7 +249,7 @@ fi
 setup_nvim_config
 
 log_info "Neovim installation completed successfully!"
-log_warn "Please restart your terminal or run 'source ~/.bashrc' to update your PATH"
+log_warn "Please restart your terminal or run 'source $shell_profile' to update your PATH"
 log_info "You can now run 'nvim' to start Neovim"
 
 # Show basic usage info

@@ -23,11 +23,8 @@ log_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
-# Check if running as root
-if [[ $EUID -eq 0 ]]; then
-   log_error "This script should not be run as root"
-   exit 1
-fi
+# Allow running as root for container environments
+# This is needed for installation inside Docker containers
 
 # Check if Ubuntu
 if ! grep -q "Ubuntu" /etc/os-release; then
