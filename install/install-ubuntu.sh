@@ -108,13 +108,33 @@ setup_nvim_config() {
     fi
 }
 
+# Install Node.js/npm (needed by Mason to install several LSP servers:
+# pyright, ts_ls, html, cssls, jsonls). Ubuntu's own apt package is often too
+# old for current LSP servers, so use NodeSource's LTS repo instead.
+install_nodejs() {
+    if command -v npm &> /dev/null; then
+        log_info "Node.js/npm already installed: $(node --version)"
+        return
+    fi
+
+    log_info "Installing Node.js (required by several LSP servers)..."
+    if curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash - &> /dev/null; then
+        sudo apt install -y nodejs
+        log_info "Node.js installed: $(node --version)"
+    else
+        log_warn "Failed to set up NodeSource repository - skipping Node.js install"
+        log_warn "LSP servers that need npm (pyright, ts_ls, html, cssls, jsonls) will fail to install"
+        log_warn "Install Node.js manually, then run :Mason in Neovim to retry"
+    fi
+}
+
 # Install dependencies
 install_dependencies() {
     log_info "Installing Neovim dependencies..."
-    
+
     # Update package lists
     sudo apt update
-    
+
     # Install essential tools for Neovim plugins
     sudo apt install -y \
         ripgrep \
@@ -125,12 +145,14 @@ install_dependencies() {
         curl \
         unzip \
         build-essential
-    
+
     log_info "Dependencies installed successfully!"
     log_info "  - ripgrep: Fast text search for Telescope live_grep"
     log_info "  - fd-find: Fast file finder for Telescope find_files"
     log_info "  - bat: Syntax-highlighted file previews"
     log_info "  - fzf: Fuzzy finder"
+
+    install_nodejs
 }
 
 # Check if Ubuntu

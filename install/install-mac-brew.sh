@@ -63,13 +63,15 @@ install_dependencies() {
         ripgrep \
         fd \
         bat \
-        fzf
-    
+        fzf \
+        node
+
     log_info "Dependencies installed successfully!"
     log_info "  - ripgrep: Fast text search for Telescope live_grep"
     log_info "  - fd: Fast file finder for Telescope find_files"
     log_info "  - bat: Syntax-highlighted file previews"
     log_info "  - fzf: Fuzzy finder"
+    log_info "  - node: Required by several Mason LSP servers (pyright, ts_ls, html, cssls, jsonls)"
 }
 
 # Check if running on macOS

@@ -61,7 +61,7 @@ install_dependencies() {
     # Check if Homebrew is available for dependencies
     if command -v brew &> /dev/null; then
         log_info "Using Homebrew to install dependencies..."
-        brew install ripgrep fd bat fzf 2>/dev/null || {
+        brew install ripgrep fd bat fzf node 2>/dev/null || {
             log_warn "Some Homebrew packages failed to install, but Neovim will still work"
         }
         log_info "Dependencies installed successfully!"
@@ -69,9 +69,10 @@ install_dependencies() {
         log_info "  - fd: Fast file finder for Telescope find_files"
         log_info "  - bat: Syntax-highlighted file previews"
         log_info "  - fzf: Fuzzy finder"
+        log_info "  - node: Required by several Mason LSP servers (pyright, ts_ls, html, cssls, jsonls)"
     else
         log_warn "Homebrew not found - some Telescope features may be limited"
-        log_info "Consider installing: ripgrep, fd, bat, fzf manually"
+        log_info "Consider installing: ripgrep, fd, bat, fzf, node manually"
         log_info "You can install Homebrew from: https://brew.sh"
     fi
 }
