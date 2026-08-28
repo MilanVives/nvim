@@ -51,7 +51,7 @@ sudo apt-get update -y
 
 # Install prerequisite packages
 log_info "Installing prerequisite packages..."
-sudo apt-get install -y ca-certificates curl gnupg lsb-release
+sudo apt-get install -y ca-certificates curl
 
 # Create keyrings directory
 log_info "Setting up Docker GPG key..."
@@ -65,12 +65,20 @@ fi
 
 sudo chmod a+r /etc/apt/keyrings/docker.asc
 
-# Add Docker repository
+# Remove legacy one-line repo definition from older versions of this script,
+# to avoid duplicate source entries alongside the deb822 file added below
+sudo rm -f /etc/apt/sources.list.d/docker.list
+
+# Add Docker repository (deb822 format, matching current Docker docs)
 log_info "Adding Docker repository..."
 echo \
-  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
-  $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
-  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+"Types: deb
+URIs: https://download.docker.com/linux/ubuntu
+Suites: $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}")
+Components: stable
+Architectures: $(dpkg --print-architecture)
+Signed-By: /etc/apt/keyrings/docker.asc" | \
+  sudo tee /etc/apt/sources.list.d/docker.sources > /dev/null
 
 # Update package index with Docker packages
 log_info "Updating package index with Docker packages..."
