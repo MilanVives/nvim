@@ -28,7 +28,7 @@ vim.g.mapleader = " "  -- Set space as the leader key for custom shortcuts
 -- Bootstrap Lazy plugin manager if it's not already installed
 
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
-if not vim.loop.fs_stat(lazypath) then
+if not vim.uv.fs_stat(lazypath) then
   vim.fn.system({
     "git",
     "clone",
@@ -81,7 +81,11 @@ local plugins = {
   -- SYNTAX HIGHLIGHTING
   -- ========================================
   {
-    "nvim-treesitter/nvim-treesitter", 
+    "nvim-treesitter/nvim-treesitter",
+    -- "main" is a full incompatible rewrite that needs Neovim 0.12+ and a
+    -- different config API. "master" keeps the classic setup()/ensure_installed
+    -- API below and is kept around upstream specifically for compatibility.
+    branch = "master",
     build = ":TSUpdate",
     config = function()
       local config = require("nvim-treesitter.configs")
@@ -146,10 +150,151 @@ local plugins = {
       })
       
       -- Keybinding for Neo-tree
-      vim.keymap.set("n", "<C-n>", ":Neotree filesystem reveal left<CR>", 
+      vim.keymap.set("n", "<C-n>", ":Neotree filesystem reveal left<CR>",
         { desc = "Toggle Neo-tree file explorer", silent = true })
     end
-  }
+  },
+
+  -- ========================================
+  -- KEYBINDING HELP / DISCOVERABILITY
+  -- ========================================
+  {
+    "folke/which-key.nvim",
+    event = "VeryLazy",
+    config = function()
+      local wk = require("which-key")
+      wk.setup({})
+      -- Label the leader-key groups used below so the popup reads clearly
+      wk.add({
+        { "<leader>f", group = "Find (Telescope)" },
+        { "<leader>b", group = "Buffer" },
+        { "<leader>g", group = "Git" },
+      })
+      -- Press <leader>h any time to see every available leader keybinding
+      vim.keymap.set("n", "<leader>h", function()
+        wk.show({ global = true })
+      end, { desc = "Show keybinding help" })
+    end
+  },
+
+  -- ========================================
+  -- LSP + AUTOCOMPLETION
+  -- ========================================
+  -- mason.nvim installs language servers for you; nvim-lspconfig wires them
+  -- up to Neovim's built-in LSP client; nvim-cmp adds the completion popup.
+  {
+    "williamboman/mason.nvim",
+    config = function()
+      require("mason").setup()
+    end
+  },
+  {
+    "williamboman/mason-lspconfig.nvim",
+    dependencies = { "williamboman/mason.nvim", "neovim/nvim-lspconfig" },
+    config = function()
+      require("mason-lspconfig").setup({
+        -- Common, lightweight servers installed automatically on first run
+        ensure_installed = { "lua_ls", "pyright", "ts_ls", "html", "cssls", "jsonls" },
+      })
+    end
+  },
+  {
+    "neovim/nvim-lspconfig",
+    dependencies = { "hrsh7th/cmp-nvim-lsp" },
+    config = function()
+      local capabilities = require("cmp_nvim_lsp").default_capabilities()
+      local lspconfig = require("lspconfig")
+
+      -- Keybindings that apply once a language server attaches to a buffer
+      vim.api.nvim_create_autocmd("LspAttach", {
+        group = vim.api.nvim_create_augroup("lsp_attach_keymaps", { clear = true }),
+        callback = function(args)
+          local opts = { buffer = args.buf }
+          vim.keymap.set("n", "gd", vim.lsp.buf.definition, { buffer = args.buf, desc = "Go to definition" })
+          vim.keymap.set("n", "gr", vim.lsp.buf.references, { buffer = args.buf, desc = "List references" })
+          vim.keymap.set("n", "K", vim.lsp.buf.hover, { buffer = args.buf, desc = "Show hover docs" })
+          vim.keymap.set("n", "<leader>rn", vim.lsp.buf.rename, { buffer = args.buf, desc = "Rename symbol" })
+          vim.keymap.set("n", "<leader>ca", vim.lsp.buf.code_action, { buffer = args.buf, desc = "Code action" })
+          vim.keymap.set("n", "[d", vim.diagnostic.goto_prev, { buffer = args.buf, desc = "Previous diagnostic" })
+          vim.keymap.set("n", "]d", vim.diagnostic.goto_next, { buffer = args.buf, desc = "Next diagnostic" })
+        end,
+      })
+
+      for _, server in ipairs({ "lua_ls", "pyright", "ts_ls", "html", "cssls", "jsonls" }) do
+        lspconfig[server].setup({ capabilities = capabilities })
+      end
+    end
+  },
+  {
+    "hrsh7th/nvim-cmp",
+    dependencies = {
+      "hrsh7th/cmp-nvim-lsp",
+      "L3MON4D3/LuaSnip",
+      "saadparwaiz1/cmp_luasnip",
+    },
+    config = function()
+      local cmp = require("cmp")
+      cmp.setup({
+        snippet = {
+          expand = function(args)
+            require("luasnip").lsp_expand(args.body)
+          end,
+        },
+        mapping = cmp.mapping.preset.insert({
+          ["<C-Space>"] = cmp.mapping.complete(),
+          ["<CR>"] = cmp.mapping.confirm({ select = true }),
+          ["<Tab>"] = cmp.mapping.select_next_item(),
+          ["<S-Tab>"] = cmp.mapping.select_prev_item(),
+        }),
+        sources = cmp.config.sources({
+          { name = "nvim_lsp" },
+          { name = "luasnip" },
+        }),
+      })
+    end
+  },
+
+  -- ========================================
+  -- GIT INTEGRATION
+  -- ========================================
+  {
+    "lewis6991/gitsigns.nvim",
+    config = function()
+      require("gitsigns").setup({
+        on_attach = function(bufnr)
+          local gs = require("gitsigns")
+          vim.keymap.set("n", "]c", gs.next_hunk, { buffer = bufnr, desc = "Next git hunk" })
+          vim.keymap.set("n", "[c", gs.prev_hunk, { buffer = bufnr, desc = "Previous git hunk" })
+          vim.keymap.set("n", "<leader>gp", gs.preview_hunk, { buffer = bufnr, desc = "Preview git hunk" })
+          vim.keymap.set("n", "<leader>gb", gs.blame_line, { buffer = bufnr, desc = "Git blame line" })
+        end,
+      })
+    end
+  },
+
+  -- ========================================
+  -- AUTO-CLOSE BRACKETS/QUOTES
+  -- ========================================
+  {
+    "windwp/nvim-autopairs",
+    event = "InsertEnter",
+    config = function()
+      require("nvim-autopairs").setup({})
+    end
+  },
+
+  -- ========================================
+  -- STATUS LINE
+  -- ========================================
+  {
+    "nvim-lualine/lualine.nvim",
+    dependencies = { "nvim-tree/nvim-web-devicons" },
+    config = function()
+      require("lualine").setup({
+        options = { theme = "catppuccin" },
+      })
+    end
+  },
 }
 
 -- ============================================================================
@@ -249,31 +394,23 @@ vim.api.nvim_create_autocmd("TextYankPost", {
 })
 
 -- Remove trailing whitespace on save
+-- Uses keeppatterns (doesn't clobber the last search) and saves/restores the
+-- cursor position and window view, so it doesn't jump you around on save.
 vim.api.nvim_create_autocmd("BufWritePre", {
   desc = "Remove trailing whitespace",
   group = vim.api.nvim_create_augroup("trim_whitespace", { clear = true }),
   pattern = "*",
-  command = [[%s/\s\+$//e]],
+  callback = function()
+    local view = vim.fn.winsaveview()
+    vim.cmd([[keeppatterns %s/\s\+$//e]])
+    vim.fn.winrestview(view)
+  end,
 })
 
 -- ============================================================================
 -- STATUS LINE
 -- ============================================================================
--- Simple custom statusline
-
-vim.opt.laststatus = 2  -- Always show statusline
-vim.opt.statusline = table.concat({
-  " %f",          -- File path
-  " %m",          -- Modified flag
-  " %r",          -- Readonly flag
-  "%=",           -- Right align
-  " %y",          -- File type
-  " %{&ff}",      -- File format
-  " %{&fenc}",    -- File encoding
-  " %l:%c",       -- Line:Column
-  " %p%%",        -- Percentage through file
-  " "
-})
+-- Handled by lualine.nvim (configured in the plugin list above)
 
 -- ============================================================================
 -- FINAL MESSAGE

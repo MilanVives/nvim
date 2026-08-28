@@ -39,7 +39,7 @@
         var: nvim_install_result.stdout_lines
         
     - name: Verify Neovim installation
-      command: /opt/nvim-linux64/bin/nvim --version
+      command: /opt/nvim-linux-x86_64/bin/nvim --version
       register: nvim_version
       
     - name: Display Neovim version
@@ -63,7 +63,7 @@
         NVIM_NON_INTERACTIVE: "true"
         NVIM_FORCE_REINSTALL: "true"
       args:
-        creates: /opt/nvim-linux64/bin/nvim
+        creates: /opt/nvim-linux-x86_64/bin/nvim
 
 # For Docker container deployments
 - name: Install Neovim in Docker containers

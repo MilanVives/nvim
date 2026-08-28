@@ -132,10 +132,12 @@ if [[ ! -f "nvim-linux-arm64.tar.gz" ]]; then
     exit 1
 fi
 
-# Check if downloaded file is actually a gzip file
-if ! file nvim-linux-arm64.tar.gz | grep -q "gzip compressed"; then
+# Check if downloaded file is actually a valid gzip archive
+# (uses gzip -t rather than the optional `file` package, which is
+# missing by default on minimal cloud images such as Oracle Ampere)
+if ! gzip -t nvim-linux-arm64.tar.gz 2>/dev/null; then
     log_error "Downloaded file is not a valid gzip archive"
-    log_error "File content: $(cat nvim-linux-arm64.tar.gz)"
+    log_error "File size: $(du -h nvim-linux-arm64.tar.gz | cut -f1)"
     rm -rf "$TEMP_DIR"
     exit 1
 fi

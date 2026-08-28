@@ -93,8 +93,8 @@ This directory contains scripts that are fully compatible with Ansible and other
 ## What Gets Installed
 
 1. **Dependencies**: `ripgrep`, `fd-find`, `bat`, `fzf`, `git`, `curl`, `unzip`, `build-essential`
-2. **Neovim**: Latest stable release to `/opt/nvim-linux64/`
-3. **Symlink**: Creates `/usr/local/bin/nvim` → `/opt/nvim-linux64/bin/nvim`
+2. **Neovim**: Latest stable release to `/opt/nvim-linux-x86_64/`
+3. **Symlink**: Creates `/usr/local/bin/nvim` → `/opt/nvim-linux-x86_64/bin/nvim`
 4. **Configuration**: Copies `init.lua` to appropriate config directory
 5. **PATH Update**: Adds Neovim to shell profile (`.bashrc`, `.zshrc`, etc.)
 

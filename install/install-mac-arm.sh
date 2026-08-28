@@ -98,7 +98,7 @@ install_dependencies
 if command -v nvim &> /dev/null; then
     current_version=$(nvim --version | head -n1)
     log_warn "Neovim is already installed: $current_version"
-    read -p "Do you want to reinstall with the nightly version? (y/N): " -n 1 -r
+    read -p "Do you want to reinstall with the latest version? (y/N): " -n 1 -r
     echo
     if [[ ! $REPLY =~ ^[Yy]$ ]]; then
         log_info "Installation cancelled by user"
@@ -111,9 +111,9 @@ TEMP_DIR=$(mktemp -d)
 cd "$TEMP_DIR"
 log_debug "Using temporary directory: $TEMP_DIR"
 
-# Download Neovim nightly for ARM64
-log_info "Downloading Neovim nightly for ARM64..."
-if ! curl -LO https://github.com/neovim/neovim/releases/download/nightly/nvim-macos-arm64.tar.gz; then
+# Download latest stable Neovim release for ARM64
+log_info "Downloading latest Neovim release for ARM64..."
+if ! curl -LO https://github.com/neovim/neovim/releases/latest/download/nvim-macos-arm64.tar.gz; then
     log_error "Failed to download Neovim"
     rm -rf "$TEMP_DIR"
     exit 1
