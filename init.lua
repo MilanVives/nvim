@@ -307,6 +307,12 @@ local lazy_opts = {
   ui = {
     border = "rounded",
   },
+  -- None of the plugins above need LuaRocks, so skip installing/checking for
+  -- it entirely. Without this, :checkhealth shows a scary-looking red X for
+  -- missing luarocks/hererocks even though it's completely harmless.
+  rocks = {
+    enabled = false,
+  },
   -- Performance optimizations
   performance = {
     rtp = {
