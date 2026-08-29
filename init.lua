@@ -291,8 +291,11 @@ local plugins = {
     "nvim-lualine/lualine.nvim",
     dependencies = { "nvim-tree/nvim-web-devicons" },
     config = function()
+      -- catppuccin/nvim registers its lualine theme as "catppuccin-nvim",
+      -- not "catppuccin" (that name doesn't exist and silently falls back
+      -- to "auto"). This variant follows whichever flavour is active.
       require("lualine").setup({
-        options = { theme = "catppuccin" },
+        options = { theme = "catppuccin-nvim" },
       })
     end
   },
