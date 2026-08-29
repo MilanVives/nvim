@@ -203,13 +203,11 @@ local plugins = {
     dependencies = { "hrsh7th/cmp-nvim-lsp" },
     config = function()
       local capabilities = require("cmp_nvim_lsp").default_capabilities()
-      local lspconfig = require("lspconfig")
 
       -- Keybindings that apply once a language server attaches to a buffer
       vim.api.nvim_create_autocmd("LspAttach", {
         group = vim.api.nvim_create_augroup("lsp_attach_keymaps", { clear = true }),
         callback = function(args)
-          local opts = { buffer = args.buf }
           vim.keymap.set("n", "gd", vim.lsp.buf.definition, { buffer = args.buf, desc = "Go to definition" })
           vim.keymap.set("n", "gr", vim.lsp.buf.references, { buffer = args.buf, desc = "List references" })
           vim.keymap.set("n", "K", vim.lsp.buf.hover, { buffer = args.buf, desc = "Show hover docs" })
@@ -220,9 +218,12 @@ local plugins = {
         end,
       })
 
-      for _, server in ipairs({ "lua_ls", "pyright", "ts_ls", "html", "cssls", "jsonls" }) do
-        lspconfig[server].setup({ capabilities = capabilities })
-      end
+      -- Neovim 0.11+ LSP config API: vim.lsp.config()/vim.lsp.enable() replaces
+      -- the old lspconfig[server].setup({...}) pattern (nvim-lspconfig is
+      -- removing that in v3.0.0). nvim-lspconfig is still needed as a plugin
+      -- here since it ships the default per-server configs these calls apply.
+      vim.lsp.config("*", { capabilities = capabilities })
+      vim.lsp.enable({ "lua_ls", "pyright", "ts_ls", "html", "cssls", "jsonls" })
     end
   },
   {
