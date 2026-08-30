@@ -136,6 +136,11 @@ local plugins = {
           },
           hijack_netrw_behavior = "open_default", -- Replace netrw
           use_libuv_file_watcher = true,          -- Auto-refresh on file changes
+          filtered_items = {
+            visible = true,         -- Show hidden/filtered files instead of just a count
+            hide_dotfiles = false,
+            hide_gitignored = false,
+          },
         },
         
         -- Window settings
